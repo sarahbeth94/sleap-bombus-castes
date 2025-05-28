@@ -1,0 +1,122 @@
+# analyze_sleap_behavior.py
+
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+import h5py
+from scipy.interpolate import interp1d
+
+# === Constants ===
+THORAX_INDEX = 1
+INTERACTION_THRESHOLD = 10
+VELOCITY_THRESHOLD_MOVING = 0.1
+VELOCITY_THRESHOLD_RESTING = 0.05
+TIME_INTERVAL = 1  # frame interval in seconds
+
+# === Utility Functions ===
+
+def fill_missing(data):
+    """Interpolates missing (NaN) values in the location data."""
+    data_filled = data.copy()
+    for i in range(data.shape[1]):
+        for j in range(data.shape[3]):
+            for k in range(2):  # x and y
+                coords = data[:, i, k, j]
+                good = ~np.isnan(coords)
+                if good.sum() > 1:
+                    f = interp1d(np.where(good)[0], coords[good], kind='linear',
+                                 bounds_error=False, fill_value='extrapolate')
+                    data_filled[:, i, k, j] = f(np.arange(len(coords)))
+    return data_filled
+
+def clean_data(loc):
+    """Replace NaNs and Infs with interpolated or max values."""
+    nan_mask = np.isnan(loc)
+    inf_mask = np.isinf(loc)
+    mean_value = np.nanmean(loc)
+    loc[nan_mask] = mean_value
+    max_value = np.nanmax(loc[np.isfinite(loc)])
+    loc[inf_mask] = max_value
+    return loc
+
+def load_sleap_h5(file_path):
+    """Load SLEAP-tracked HDF5 file."""
+    with h5py.File(file_path, "r") as f:
+        locations = f["tracks"][:].T
+        node_names = [n.decode() for n in f["node_names"][:]]
+    return locations, node_names
+
+# === Visualization and Metrics ===
+
+def plot_tracks(locations, node_index=THORAX_INDEX):
+    """Plot tracks for a specific node (default: thorax)."""
+    num_bees = locations.shape[3]
+    plt.figure(figsize=(12, 8))
+    for bee_id in range(num_bees):
+        x = locations[:, node_index, 0, bee_id]
+        y = locations[:, node_index, 1, bee_id]
+        valid = ~np.isnan(x) & ~np.isnan(y)
+        if valid.any():
+            plt.plot(x[valid], y[valid], label=f'Bee {bee_id+1}')
+    plt.title("Thorax Tracks of Bumblebees")
+    plt.xlabel("X Coordinate")
+    plt.ylabel("Y Coordinate")
+    plt.grid(True)
+    plt.legend()
+    plt.show()
+
+def compute_velocity(locations, node_index=THORAX_INDEX):
+    """Compute average velocity and standard error for each bee."""
+    num_bees = locations.shape[3]
+    thorax = locations[:, node_index, :, :]
+    avg_velocities = np.zeros(num_bees)
+    stderr_velocities = np.zeros(num_bees)
+
+    for i in range(num_bees):
+        x = thorax[:, 0, i]
+        y = thorax[:, 1, i]
+        valid = ~np.isnan(x) & ~np.isnan(y)
+        x, y = x[valid], y[valid]
+        dx, dy = np.diff(x), np.diff(y)
+        vels = np.sqrt(dx**2 + dy**2) / TIME_INTERVAL
+        avg_velocities[i] = np.mean(vels)
+        stderr_velocities[i] = np.std(vels) / np.sqrt(len(vels))
+    return avg_velocities, stderr_velocities
+
+def plot_bar(values, errors, ylabel, title, color):
+    """Generic bar plot for metrics."""
+    n = len(values)
+    plt.figure(figsize=(10, 6))
+    plt.bar(range(1, n + 1), values, yerr=errors, capsize=5, color=color, edgecolor='black')
+    plt.xticks(range(1, n + 1), [f"Bee {i}" for i in range(1, n + 1)])
+    plt.ylabel(ylabel)
+    plt.title(title)
+    plt.grid(axis='y')
+    plt.show()
+
+# === Main Analysis ===
+
+def run_analysis(file_path):
+    print("Loading data...")
+    locations, node_names = load_sleap_h5(file_path)
+    
+    print("Filling missing values...")
+    locations = fill_missing(locations)
+    
+    print("Cleaning data...")
+    locations[:, THORAX_INDEX, :, :] = clean_data(locations[:, THORAX_INDEX, :, :])
+
+    print("Plotting tracks...")
+    plot_tracks(locations)
+
+    print("Calculating velocities...")
+    avg_vel, stderr_vel = compute_velocity(locations)
+
+    print("Plotting velocity metrics...")
+    plot_bar(avg_vel, stderr_vel, "Average Velocity", "Velocity of Each Bumblebee", "mediumpurple")
+
+    print("Done.")
+
+# === Run Example ===
+# Update this with your path or mount Google Drive in Colab first
+# run_analysis("/content/drive/MyDrive/YourFolder/yourfile.analysis.h5")
