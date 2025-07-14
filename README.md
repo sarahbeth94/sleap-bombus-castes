@@ -1,5 +1,5 @@
 # sleap-bombus-castes
-Python code used for 'Field realistic pesticide exposure disrupts caste-specific development and colony performance in bumblebees'
+Python code used for 'Caste-Specific Vulnerability: Pesticide Exposure Differentially Impacts Caste Development and Colony Performance in Bumblebees'
 
 # 🐝 Bumblebee Behavior Analysis from SLEAP Tracking
 
@@ -10,7 +10,6 @@ This repository contains Python code for analyzing the behavior of *Bombus impat
 ## 📂 Repository Contents
 
 - `analyze_sleap_behavior.py` – Main analysis script (can also be converted to a Jupyter/Colab notebook)
-- `example_data.h5` – (Optional) Sample HDF5 file with SLEAP tracking data (not included; see below for format)
 - `README.md` – This documentation
 
 ---
@@ -19,7 +18,7 @@ This repository contains Python code for analyzing the behavior of *Bombus impat
 
 This script was developed to analyze and visualize behavior of individual bumblebees tracked in experimental arenas using SLEAP. The code was used in analyses for the manuscript:
 
-> **"Field-realistic pesticide exposure disrupts caste-specific behavior and morphology in bumblebees"** (Under Review)
+> **"Caste-Specific Vulnerability: Pesticide Exposure Differentially Impacts Caste Development and Colony Performance in Bumblebees"** (Under Review)
 
 ---
 
